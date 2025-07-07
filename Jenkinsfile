@@ -8,7 +8,8 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/Djohell13/paycare-etl.git'
+                // Clonage du repo public sans credentials
+                git url: 'https://github.com/Djohell13/paycare-etl.git', branch: 'main'
             }
         }
 
@@ -24,7 +25,8 @@ pipeline {
             }
             post {
                 always {
-                    junit 'unit-tests.xml'  // Publish test results
+                    // Publication des résultats de test
+                    junit 'unit-tests.xml'
                 }
             }
         }
@@ -38,11 +40,20 @@ pipeline {
         stage('Run Docker Container') {
             steps {
                 script {
-                    // Create input data file dynamically
-                    sh 'echo "employee_id,employee_name,salary\n101,Alice,5000\n102,Bob,7000" > input_data.csv'
+                    // Création dynamique d’un fichier de test
+                    sh '''
+                        echo "employee_id,employee_name,salary" > input_data.csv
+                        echo "101,Alice,5000" >> input_data.csv
+                        echo "102,Bob,7000" >> input_data.csv
+                    '''
 
-                    // Run the Docker container with mounted input/output files
-                    sh 'docker run --rm -v $(pwd)/input_data.csv:/app/input_data.csv -v $(pwd)/output_data.csv:/app/output_data.csv ${DOCKER_IMAGE}'
+                    // Exécution du container avec montage des fichiers
+                    sh '''
+                        docker run --rm \
+                          -v $(pwd)/input_data.csv:/app/input_data.csv \
+                          -v $(pwd)/output_data.csv:/app/output_data.csv \
+                          ${DOCKER_IMAGE}
+                    '''
                 }
             }
         }
@@ -50,12 +61,14 @@ pipeline {
 
     post {
         success {
-            echo 'ETL Pipeline completed successfully!'
-            // Optionally send notification (Slack/Email)
+            echo '✅ ETL Pipeline completed successfully!'
         }
         failure {
-            echo 'ETL Pipeline failed.'
-            // Optionally send notification (Slack/Email)
+            echo '❌ ETL Pipeline failed.'
+        }
+    }
+}
+
         }
     }
 }
