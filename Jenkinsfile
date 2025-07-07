@@ -8,7 +8,6 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                // Clonage du repo public sans credentials
                 git url: 'https://github.com/Djohell13/paycare-etl.git', branch: 'main'
             }
         }
@@ -25,7 +24,6 @@ pipeline {
             }
             post {
                 always {
-                    // Publication des résultats de test
                     junit 'unit-tests.xml'
                 }
             }
@@ -33,27 +31,25 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ${DOCKER_IMAGE} .'
+                sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
 
         stage('Run Docker Container') {
             steps {
                 script {
-                    // Création dynamique d’un fichier de test
                     sh '''
                         echo "employee_id,employee_name,salary" > input_data.csv
                         echo "101,Alice,5000" >> input_data.csv
                         echo "102,Bob,7000" >> input_data.csv
                     '''
 
-                    // Exécution du container avec montage des fichiers
-                    sh '''
+                    sh """
                         docker run --rm \
-                          -v $(pwd)/input_data.csv:/app/input_data.csv \
-                          -v $(pwd)/output_data.csv:/app/output_data.csv \
+                          -v \$(pwd)/input_data.csv:/app/input_data.csv \
+                          -v \$(pwd)/output_data.csv:/app/output_data.csv \
                           ${DOCKER_IMAGE}
-                    '''
+                    """
                 }
             }
         }
@@ -65,10 +61,6 @@ pipeline {
         }
         failure {
             echo '❌ ETL Pipeline failed.'
-        }
-    }
-}
-
         }
     }
 }
