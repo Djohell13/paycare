@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/your-username/paycare-etl.git'
+                git 'https://github.com/Djohell13/paycare-etl.git'
             }
         }
 
