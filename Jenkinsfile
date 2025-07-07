@@ -12,14 +12,15 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install Dependencies and Run Tests') {
+            agent {
+                docker {
+                    image 'python:3.10-slim'
+                    args '-u root:root'  // pour avoir les droits root dans le container si besoin
+                }
+            }
             steps {
                 sh 'pip install -r requirements.txt'
-            }
-        }
-
-        stage('Run Unit Tests') {
-            steps {
                 sh 'pytest --junitxml=unit-tests.xml'
             }
             post {
@@ -43,7 +44,6 @@ pipeline {
                         echo "101,Alice,5000" >> input_data.csv
                         echo "102,Bob,7000" >> input_data.csv
                     '''
-
                     sh """
                         docker run --rm \
                           -v \$(pwd)/input_data.csv:/app/input_data.csv \
