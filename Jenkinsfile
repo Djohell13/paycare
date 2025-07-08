@@ -2,62 +2,65 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'paycare-etl'
+        TEST_IMAGE = 'paycare-tests'
+        ETL_IMAGE = 'paycare-etl'
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_DEFAULT_REGION = 'eu-north-1' 
     }
 
     stages {
+        
         stage('Clone Repository') {
             steps {
-                git url: 'https://github.com/Djohell13/paycare', branch: 'main'
+                git branch: 'main', url: 'https://github.com/Djohell13/paycare.git'
             }
         }
 
-        stage('Install Dependencies and Run Tests') {
-            agent {
-                docker {
-                    image 'python:3.10-slim'
-                    args '-u root:root'  // pour avoir les droits root dans le container si besoin
-                }
-            }
+        stage('Build Test Container') {
             steps {
-                sh 'pip install -r requirements.txt'
-                sh 'pytest --junitxml=unit-tests.xml'
-            }
-            post {
-                always {
-                    junit 'unit-tests.xml'
-                }
+                sh 'docker build -t ${TEST_IMAGE} -f tests/Dockerfile .'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Run Unit Tests') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE} ."
+                sh '''
+                    docker run --rm \
+                        --env AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+                        --env AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+                        --env AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
+                        paycare-tests
+            '''
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Build ETL Container') {
+            steps {
+                sh 'docker build -t ${ETL_IMAGE} .'
+            }
+        }
+
+        stage('Run ETL in Docker') {
             steps {
                 script {
                     sh '''
-                        echo "employee_id,employee_name,salary" > input_data.csv
-                        echo "101,Alice,5000" >> input_data.csv
-                        echo "102,Bob,7000" >> input_data.csv
-                    '''
-                    sh """
                         docker run --rm \
-                          -v \$(pwd)/input_data.csv:/app/input_data.csv \
-                          -v \$(pwd)/output_data.csv:/app/output_data.csv \
-                          ${DOCKER_IMAGE}
-                    """
+                        -v ${WORKSPACE}/data:/app/data \
+                        ${ETL_IMAGE}
+                    '''
+
+                    sh 'ls -l ${WORKSPACE}/data'
                 }
             }
         }
+
     }
 
     post {
         success {
             echo '✅ ETL Pipeline completed successfully!'
+            archiveArtifacts artifacts: 'data/output_data.csv', fingerprint: true
         }
         failure {
             echo '❌ ETL Pipeline failed.'
