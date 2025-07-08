@@ -1,17 +1,17 @@
-# Utiliser l'image officielle Python
+# Use an official Python runtime as a parent image
 FROM python:3.9-slim
 
-# Définir le dossier de travail
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copier uniquement les fichiers nécessaires
-COPY tests/requirements.txt requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+# Copy the current directory contents into the container
+COPY . /app
 
-# Copier le code source et les tests (avec le bon chemin)
-COPY etl_process.py /app/
-COPY tests/test_etl.py tests/upload_s3.py /app/
+# Install any needed packages specified in requirements.txt
+RUN pip install pandas
 
-# Exécuter les tests Pytest au démarrage
-# CMD ["pytest", "test_etl.py", "--junitxml=results.xml"]
-CMD pytest test_etl.py --junitxml=results.xml && python upload_s3.py
+# Make a volume mount point for the input/output CSV files
+VOLUME ["/app/input_data.csv", "/app/output_data.csv"]
+
+# Run the application (by default, run the main ETL process)
+CMD ["python", "etl_process.py"]
