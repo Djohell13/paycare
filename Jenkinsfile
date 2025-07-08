@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git url: 'https://github.com/Djohell13/paycare.git', branch: 'main'
+                git url: 'https://github.com/Djohell13/paycare', branch: 'main'
             }
         }
 
